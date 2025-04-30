@@ -1,0 +1,26 @@
+- selenium3 -
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
+
+driver_path = 'c:/tools/chromedriver/chromedriver.exe'
+service = Service(driver_path)
+driver = webdriver.Chrome(service=service)
+
+
+
+- selenium4 -
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+import time
+
+# Chrome 옵션 설정
+options = Options()
+options.add_argument('--headless') # 창을 띄우지 않고 실행하고 싶을 때
+options.add_argument('--no-sandbox')
+options.add_argument('--disable-dev-shm-usage')
+
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
