@@ -50,6 +50,7 @@ SELECT AVG(age) FROM users;
 SELECT AVG(age), COUNT(*) FROM users GROUP BY age;
 
 
+CREATE DATABASE data_collection;
 USE data_collection;
 CREATE TABLE data_types_example(
 	id INT AUTO_INCREMENT PRIMARY KEY,
@@ -118,6 +119,7 @@ SELECT * FROM members;
 -- 조건 검색
 SELECT * FROM members WHERE member_name = 'Kim';
 -- 정렬
+-- DESC(내림차순 정렬)
 SELECT * FROM members ORDER BY join_date DESC;
 
 -- (4) Update
@@ -194,19 +196,19 @@ INSERT INTO employees(emp_name, email, dept_id) VALUES
 -- 관계형 데이터 조회 (JOIN)
 SELECT e.emp_name, e.email, d.dept_name
 FROM employees e
-JOIN departments d
-ON e.dept_id = d.dept_id;
+JOIN departments d ON e.dept_id = d.dept_id;
 
 
 -- 집계 함수 & GROUP BY 실습
--- 부서별 직원 월급 데이터를 추가한 테이블 만들기
+
+-- (1) 직원 추가
 INSERT INTO employees (emp_name, email, dept_id) VALUES
 ('Choi', 'choi@company.com', 1),
 ('Han', 'han@company.com', 2);
 SELECT * FROM employees;
 
+-- (2) 부서별 직원 월급 데이터를 추가한 테이블 만들기
 DROP TABLE IF EXISTS employees_salary;
-
 CREATE TABLE employees_salary(
 	emp_id INT PRIMARY KEY,
     dept_id INT NOT NULL,
@@ -222,8 +224,41 @@ INSERT INTO employees_salary (emp_id, dept_id, salary) VALUES
 (4, 1, 5500),
 (5, 2, 3800);
 
-SELECT d.dept_name AS 부서명, COUNT(e.emp_id) AS 직원수
+-- (3) 부서별 직원 수(COUNT)
+SELECT d.dept_name AS 부서명,
+COUNT(e.emp_id) AS 직원수
 FROM departments d
-JOIN employees e
-ON d.dept_id = e.dept_id
+JOIN employees e ON d.dept_id = e.dept_id
 GROUP BY d.dept_name;
+
+-- (4) 부서별 평균 급여(AVG)
+SELECT d.dept_name AS 부서명,
+ROUND(AVG(s.salary), 2) AS 평균급여
+FROM departments d
+JOIN employees_salary s ON d.dept_id = s.dept_id
+GROUP BY d.dept_name;
+
+-- (5) 부서별 최고/최저 급여(MIN, MAX)
+SELECT d.dept_name AS 부서명,
+MAX(s.salary) AS 최고급여,
+MIN(s.salary) AS 최저급여
+FROM departments d
+JOIN employees_salary s ON d.dept_id = s.dept_id
+GROUP BY d.dept_name;
+
+-- (6) 평균 급여가 4500 이상인 부서(HAVING)
+SELECT d.dept_name AS 부서명,
+ROUND(AVG(s.salary), 2) AS 평균급여
+FROM departments d
+JOIN employees_salary s ON d.dept_id = s.dept_id
+GROUP BY d.dept_name
+HAVING AVG(s.salary) >= 4500;
+
+-- (7) 부서와 급여가 같은 인원수 (복합 GROUP BY)
+SELECT d.dept_name AS 부서명,
+s.salary AS 급여,
+COUNT(*) AS 인원수
+FROM departments d
+JOIN employees_salary s ON d.dept_id = s.dept_id
+GROUP BY d.dept_name, s.salary
+ORDER BY d.dept_name, s.salary DESC;
