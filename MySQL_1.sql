@@ -448,7 +448,8 @@ SELECT * FROM v_dept_salary_summary
 WHERE 평균급여 >= 4500;
 
 -- (6) VIEW + JOIN
-SELECT v.부서명, v.평균급여
+-- 이미 생성된 VIEW 에 JOIN 되어있음
+SELECT v.부서명, v.인원수, v.평균급여
 FROM v_dept_salary_summary v;
 
 -- (7) 실습
@@ -467,4 +468,80 @@ WHERE s.salary > (
 SELECT * FROM v_salary
 ORDER BY 급여 DESC;
 
+
+-- 인덱스 & 성능 최적화
+-- (1-1) 성능 테스트용 테이블 생성
+CREATE TABLE performance_test(
+	id INT PRIMARY KEY AUTO_INCREMENT,
+    user_name VARCHAR(100),
+    email VARCHAR(100),
+    age INT,
+    join_date DATE
+);
+
+-- (1-2) 더미 데이터 삽입(단순 샘플)
+-- CONCAT() : 문자열 연결
+-- FLOOR(RAND() * 10000) : 0.0000~9.9999 * 10000 >> 0000~9999
+INSERT INTO performance_test(user_name, email, age, join_date)
+SELECT
+	CONCAT('User', LPAD(FLOOR(RAND() * 10000), 4, '0')),
+    CONCAT('user', LPAD(FLOOR(RAND() * 10000), 4, '0'), '@mail.com'),
+    FLOOR(RAND() * 60) + 18,
+    CURDATE() - INTERVAL FLOOR(RAND() * 3650) DAY
+FROM information_schema.tables
+LIMIT 500;
+
+-- (2) 인덱스 없는 상태에서 쿼리 성능 확인
+EXPLAIN SELECT * FROM performance_test WHERE age >= 40;
+
+-- (3) 인덱스 생성
+CREATE INDEX idx_age ON performance_test(age);
+
+-- (4) 인덱스 생성 후 쿼리 성능 확인
+EXPLAIN SELECT * FROM performance_test WHERE age >= 40;
+
+-- (5) 인덱스 삭제
+DROP INDEX idx_age ON performance_test;
+
+-- (6) 복합 인덱스 생성
+CREATE INDEX idx_age_date ON performance_test(age, join_date);
+-- (6-1) 복합 인덱스 삭제
+DROP INDEX idx_age_date ON performance_test;
+
+-- (7) 복합 인덱스 성능 분석
+EXPLAIN SELECT * FROM performance_test
+WHERE age >= 30 AND join_date > '2018-01-01';
+
+
+-- 트랜잭션 & COMMIT / ROLLBACK
+-- (1) 계좌 생성
+CREATE TABLE accounts(
+	user_id INT PRIMARY KEY,
+    user_name VARCHAR(100),
+    balance INT
+);
+
+-- (2) 초기 데이터 삽입
+INSERT INTO accounts (user_id, user_name, balance) VALUES
+	(1, 'Kim', 100000),
+    (2, 'Lee', 50000);
     
+-- (3) 기본 조회
+SELECT * FROM accounts;
+
+-- (4) 트랜잭션 없이 계좌 이체(위험 예시)
+UPDATE accounts SET balance = balance - 30000 WHERE user_id = 1;
+UPDATE accounts SET balance = balance + 30000 WHERE user_id = 2;
+
+-- (5) 트랜잭션 안전 처리
+START TRANSACTION;
+UPDATE accounts SET balance = balance - 30000 WHERE user_id = 1;
+UPDATE accounts SET balance = balance + 30000 WHERE user_id = 2;
+COMMIT;
+
+-- (6) 중간 오류 시 ROLLBACK
+START TRANSACTION;
+UPDATE accounts SET balance = balance - 30000 WHERE user_id = 1;
+-- 의도적 오류(컬럼명 오타)
+UPDATE accounts SET balnce = balance + 30000 WHERE user_id = 2;
+ROLLBACK;
